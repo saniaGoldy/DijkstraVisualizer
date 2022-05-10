@@ -1,8 +1,9 @@
 package mousegraph.view;
 
 import mousegraph.logic.Check;
-import mousegraph.logic.Dijkstra;
+import mousegraph.logic.AStar;
 import mousegraph.model.Node;
+import mousegraph.model.Point;
 import mousegraph.model.Shapes;
 import mousegraph.utils.Strings;
 
@@ -23,7 +24,7 @@ public class MouseGraph extends JFrame implements MouseListener, MouseMotionList
 
     Timer timer = new Timer(10, this);
 
-    JButton mode1, mode2, mode3, mode4, djikstra, stop, exportGraph;
+    JButton mode1, mode2, mode3, mode4, aStar, stop, exportGraph;
     JLabel label1, label2, label3, label4;
 
     mousegraph.model.Point press = null, release = null, curr = null;
@@ -48,8 +49,8 @@ public class MouseGraph extends JFrame implements MouseListener, MouseMotionList
         mode3.setBounds(15, 510, 200, 20);
         mode4 = new JButton(Strings.EditEdge);
         mode4.setBounds(15, 540, 200, 20);
-        djikstra = new JButton(Strings.StartAnimation);
-        djikstra.setBounds(400, 450, 200, 20);
+        aStar = new JButton(Strings.StartAnimation);
+        aStar.setBounds(400, 450, 200, 20);
         stop = new JButton(Strings.StopAnimation);
         stop.setBounds(400, 480, 200, 20);
         add(stop);
@@ -181,7 +182,7 @@ public class MouseGraph extends JFrame implements MouseListener, MouseMotionList
         });
 
 
-        djikstra.addActionListener(ee -> {
+        aStar.addActionListener(ee -> {
             MouseGraph.this.mode = -1;
 
             label1.setText(Strings.OFF);
@@ -226,7 +227,8 @@ public class MouseGraph extends JFrame implements MouseListener, MouseMotionList
                     mousegraph.model.Error.display(Strings.EnterValidVertices);
                     f1.dispose();
                 } else {
-                    path.add(Dijkstra.solve(graph, t1.getText(), t2.getText()));
+                    String dest = t2.getText();
+                    path.add(AStar.solve(graph, t1.getText(), dest, vertex.get(dest)));
                     if (path.getLast().size() == 0) {
                         mousegraph.model.Error.display(Strings.NoPathExists);
                         f1.dispose();
@@ -315,7 +317,7 @@ public class MouseGraph extends JFrame implements MouseListener, MouseMotionList
         });
 
 
-        add(djikstra);
+        add(aStar);
         add(mode1);
         add(mode2);
         add(mode3);
@@ -510,10 +512,11 @@ public class MouseGraph extends JFrame implements MouseListener, MouseMotionList
                 if ((x <= 15 + X && x >= X - 15) && (y <= 15 + Y && y >= Y - 15)) {
                     press_name = it.getKey();
                     press = new mousegraph.model.Point(x, y);
+                    break;
                 }
             }
             if (press_name != null) {
-                edges.clear();
+                if (!edges.isEmpty()) edges.clear();
                 edges = graph.get(press_name);
                 graph.remove(press_name);
                 vertex.remove(press_name);
@@ -560,13 +563,13 @@ public class MouseGraph extends JFrame implements MouseListener, MouseMotionList
                             if (xx.getName().equals(too)) graph.get(fromm).remove(c);
                             c++;
                         }
-                        graph.get(fromm).add(new Node(too, newWeight));
+                        graph.get(fromm).add(new Node(too, newWeight, vertex.get(too)));
                         c = 0;
                         for (Node xx : graph.get(too)) {
                             if (xx.getName().equals(fromm)) graph.get(too).remove(c);
                             c++;
                         }
-                        graph.get(too).add(new Node(fromm, newWeight));
+                        graph.get(too).add(new Node(fromm, newWeight, vertex.get(fromm)));
                         repaint();
                     } catch (NumberFormatException eeee) {
                         mousegraph.model.Error.display(Strings.EnterValidInteger);
@@ -636,8 +639,8 @@ public class MouseGraph extends JFrame implements MouseListener, MouseMotionList
                     if (name != null) {
                         try {
                             int wt = Integer.parseInt(name);
-                            graph.get(press_name).add(new Node(release_name, wt));
-                            graph.get(release_name).add(new Node(press_name, wt));
+                            graph.get(press_name).add(new Node(release_name, wt, release));
+                            graph.get(release_name).add(new Node(press_name, wt, press));
                         } catch (NumberFormatException ee) {
                             mousegraph.model.Error.display(Strings.EnterValidInteger);
                         }
@@ -653,6 +656,15 @@ public class MouseGraph extends JFrame implements MouseListener, MouseMotionList
             graph.put(press_name, new LinkedList<>());
             for (Node x : edges) {
                 graph.get(press_name).add(x);
+            }
+            for (Map.Entry<String, LinkedList<Node>> it : graph.entrySet()) {
+                LinkedList<Node> nodes = it.getValue();
+                for (int i = 0; i < nodes.size(); i++) {
+                    if (Objects.equals(nodes.get(i).getName(), press_name)) {
+                        nodes.get(i).setPoint(new Point(e.getX(), e.getY()));
+                    }
+                }
+                it.setValue(nodes);
             }
             press_name = null;
             repaint();

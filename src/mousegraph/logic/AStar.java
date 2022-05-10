@@ -1,14 +1,15 @@
 package mousegraph.logic;
 
 import mousegraph.model.Node;
+import mousegraph.model.Point;
 
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Stack;
 import java.util.TreeMap;
 
-public class Dijkstra {
-    public static LinkedList<String> solve(Map<String, LinkedList<Node>> m, String from, String to) {
+public class AStar {
+    public static LinkedList<String> solve(Map<String, LinkedList<Node>> m, String from, String to, Point dest) {
 
         LinkedList<String> vertices = new LinkedList<>();
 
@@ -19,11 +20,13 @@ public class Dijkstra {
         Map<String, Integer> vis = new TreeMap<>();
         Map<String, Double> cost = new TreeMap<>();
         Map<String, String> parent = new TreeMap<>();
+
         cost.put(from, (double) 0);
+
         int n = m.size();
         for (int i = 0; i < n - 1; i++) {
             String chosen = "";
-            double minn = 100000000;
+            double minn = Double.MAX_VALUE;
             for (String s : vertices) {
                 if (vis.get(s) == null) {
                     if (cost.get(s) == null) continue;
@@ -34,22 +37,23 @@ public class Dijkstra {
                 }
             }
             if (chosen.equals("")) continue;
-            vis.put(chosen, 1);
+            if (chosen.equals(to)) break;
             LinkedList<Node> connected;
             connected = m.get(chosen);
             for (Node x : connected) {
-                double newCost = minn + x.getWt();
+                double newCost = minn + x.getWt() + heuristic(x.getPoint(), dest);
                 if (cost.get(x.getName()) == null) {
                     cost.put(x.getName(), newCost);
                     parent.put(x.getName(), chosen);
                 } else {
-                    double oldCost = cost.get(x.getName());
+                    double oldCost = cost.get(x.getName()) + heuristic(x.getPoint(), dest);
                     if (oldCost > newCost) {
                         cost.put(x.getName(), newCost);
                         parent.put(x.getName(), chosen);
                     }
                 }
             }
+            vis.put(chosen, 1);
         }
         /////
         Stack<String> ans = new Stack<>();
@@ -68,5 +72,9 @@ public class Dijkstra {
             }
             return ll;
         }
+    }
+
+    private static double heuristic(Point a, Point b) {
+        return Math.sqrt(Math.pow((b.getX() - a.getX()), 2) + Math.pow((b.getY() - a.getY()), 2));
     }
 }
